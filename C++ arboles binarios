@@ -1,0 +1,870 @@
+#include<iostream>
+#include<cstdlib>
+#include<ctime>
+#include<string>
+#include<Windows.h>
+#include<string.h>
+using namespace std;
+
+struct nodo{
+	int dato;
+	nodo *der;
+	nodo *izq;
+	nodo *padre;
+};
+
+//Prototipo, función de tipo nodo
+nodo *crear(int,nodo *);
+void inser(nodo *&, int,nodo *);
+void mostrar(nodo*&arbol, int contador);
+bool busqueda(nodo *&arbol, int n, string flag);
+void preOrden(nodo* arbol);
+void inOrden(nodo* arbol);
+void postOrden(nodo* arbol);
+
+//Prototipos para eliminar nodos del árbol
+void eliminarNodo(nodo *&arbol,int n);
+nodo* minimo(nodo *&arbol);
+
+void menu();
+
+int tamano,numNodo=0,padreRaiz=0;  //padreRaiz es un pequeño cambio que asigna al nodo Raiz como padre de si mismo
+                                   //para verificar correctamente el padre de cada nodo en la impresión en pantalla
+								   //usando la función mostrar();
+
+int main()
+{
+	system("color 1F"); 
+	srand(time(NULL));
+	cout << "\tDigite la cantidad de datos deseada: "; cin >> tamano;
+	system("cls");
+	menu();
+
+	system("pause");
+	return 0;
+}
+
+nodo *crear(int n,nodo *padre)
+{
+	nodo *nuevo = new nodo();
+	nuevo->dato = n;
+	nuevo->der = NULL;
+	nuevo->izq = NULL;
+
+	if (padreRaiz == 0) { //Se da cuando el árbol está vacio
+		nuevo->padre = nuevo;
+		padreRaiz = 1;
+	}
+	else if (padreRaiz == 1) {//para agregar hijos a la raíz u otros nodos
+		nuevo->padre = padre;
+	}
+	return nuevo;
+}
+
+void inser(nodo *&arbol, int n,nodo *padre)
+{
+	//Dos casos, árbol vacio o no
+	if (arbol==NULL)
+	{
+		nodo *nuevo = crear(n,padre);
+		arbol = nuevo;
+	}
+	else
+	{
+		int Raiz = arbol->dato;
+		if (n < Raiz) {
+			inser(arbol->izq, n,arbol);
+		}
+		else
+		{
+			inser(arbol->der, n,arbol);
+		}
+	}
+}
+
+void mostrar(nodo*& arbol, int contador)
+{
+	if (arbol == NULL) {
+		return;
+	}else{
+		mostrar(arbol->der, contador + 1);
+		for (int i = 0; i < contador; i++)
+		{
+			cout <<"   ";
+		}
+		numNodo++; //se imprime ejemplo:  5[7] , significa que el 7 es padre de 5*
+		cout << arbol->dato <<"["<<arbol->padre->dato<<"]"<< endl; Sleep(10);
+		mostrar(arbol->izq, contador + 1);
+	}
+}
+
+bool busqueda(nodo*& arbol, int n,string flag)
+{
+	if (arbol==NULL)//árbol vacio
+	{
+		return false;
+	}
+	else if (arbol->dato == n) {//si corresponde a la raiz
+		if (flag=="0")
+		{
+			eliminarNodo(arbol, n);
+		}
+		return true;
+	}
+	else if (n < arbol->dato) {
+		return busqueda(arbol->izq, n,flag);
+	}
+	else
+	{
+		return busqueda(arbol->der, n,flag);
+	}
+}
+
+void eliminarNodo(nodo *&arbol, int n)
+{
+	
+	if (arbol->dato==arbol->padre->dato)//Significa que se refiere a la raíz
+	{
+		/*Caso1 Eliminar raíz: La raíz se remplazará por su hijo mayor siempre y cuando este solo tenga un hijo, en caso
+		contrario no se podrá eliminar, pero se podrá cambiar con un número que esté entre su hijo menor y mayor.
+		Si la raíz solo tiene un hijo su eliminación no presentará problemas.*/
+		cout << "\n\tEstamos hablando de la raíz\n";
+		
+		if (arbol->izq!=NULL && arbol->der!=NULL) //Caso (A) Raíz con dos hijos *VERIFICADO*
+		{
+			cout << "\tLa raiz tiene dos hijos\n";
+			if (arbol->der->der!=NULL && arbol->der->izq==NULL)
+			{
+				//A.1:Hijo derecho con hijo derecho,En caso de querer eliminar la raíz, se remplazará por su
+				//Hijo derecho siempre y cuando este tenga un hijo derecho *VERIFICADO*
+
+				cout << "\tEl hijo derecho de la raiz tiene un hijo derecho.\n";
+				
+				nodo* derecho = new nodo();
+
+				derecho = arbol->der;
+			
+				arbol->dato = derecho->dato;
+
+				arbol->der = derecho->der;
+				derecho->der->padre = arbol;
+				derecho->padre = NULL;
+				
+				
+				delete derecho;
+			}
+			else if (arbol->der->der == NULL && arbol->der->izq == NULL) {
+				//A2:Hijo derecho sin hijos *VERIFICADO*
+				cout << "\tEl hijo derecho de la raiz no tiene hijos.\n";
+
+				nodo* derecho = new nodo();
+
+				derecho = arbol->der;
+
+				arbol->dato = derecho->dato;
+
+				arbol->der =NULL;
+				derecho->padre = NULL;
+				derecho->dato = NULL;
+				delete derecho;
+			}
+			else {
+				//A3: No es posible eliminar la raíz
+				cout << "\tDebido a la distribución del árbol binario no es posible eliminar la raíz\n";
+				cout << "\t*Se puede editar el nodo raíz con números entre " << arbol->izq->dato << " y " << arbol->der->dato << "\n";
+			}
+
+		}else if (arbol->izq == NULL && arbol->der == NULL) { //Caso (B) Raíz sin hijos *VERIFICADO*
+			//Simplemente se borra la raíz inicial, luego se puede ingresar un nuevo número para que este tome
+			//el lugar de la nueva raíz
+			padreRaiz = 0;
+			arbol = NULL;
+			cout << "\tLa raiz no tiene hijos\n";
+		}else if (arbol->izq!=NULL)  //Caso (C) Raíz con hijo izquierdo *VERIFICADO*
+		{
+			cout << "\tLa raiz tiene hijo izquierdo\n";
+			nodo* izquierdo = new nodo();
+			
+			izquierdo = arbol->izq;
+
+			arbol->dato = izquierdo->dato;
+
+			
+			if (arbol->izq->izq != NULL && arbol->izq->der != NULL)
+			{//(C.1).Hijo izquierdo tiene dos hijos *VERIFICADO*
+				cout << "\tHijo izquierdo tiene dos hijos\n";
+				izquierdo->der->padre = arbol;
+				izquierdo->izq->padre = arbol;
+				arbol->izq = izquierdo->izq;
+				arbol->der = izquierdo->der;
+				izquierdo->padre = NULL;
+				izquierdo->izq = NULL;
+				izquierdo->der = NULL;
+
+				delete izquierdo; 
+			}
+			else if (izquierdo->izq == NULL && izquierdo->der == NULL) {
+				//(C.2).Hijo izquierdo no tiene hijos *VERIFICADO*
+				cout << "\tHijo izquierdo no tiene hijos\n";
+				izquierdo->padre = NULL;
+				arbol->izq = NULL;
+				delete izquierdo;
+			}
+			else if(izquierdo->izq != NULL)
+			{
+				//(C.3).Hijo izquierdo tiene un hijo izquierdo *VERIFICADO*
+				cout << "\tHijo izquierdo tiene un hijo izquierdo\n";
+				izquierdo->izq->padre = arbol;
+				arbol->izq = izquierdo->izq;
+				izquierdo->padre = NULL;
+				izquierdo->izq = NULL;
+				delete izquierdo;
+			}
+			else if (izquierdo->der != NULL) {
+				//(C.4).Hijo izquierdo tiene un hijo derecho *VERIFICADO*
+				cout << "\tHijo izquierdo tiene un hijo derecho\n";
+				izquierdo->der->padre = arbol;
+				arbol->izq= izquierdo->der;
+				izquierdo->padre = NULL;
+				izquierdo->der = NULL;
+				delete izquierdo;
+			}
+			
+		}else if (arbol->der != NULL) {//Caso (D) Raíz con hijo derecho *VERIFICADO*
+			cout << "\tLa raiz tiene hijo derecho\n";
+			nodo* derecho = new nodo();
+
+			derecho = arbol->der;
+
+			arbol->dato = derecho->dato;
+
+
+			if (arbol->der->izq != NULL && arbol->der->der != NULL)
+			{//(D.1).Hijo derecho tiene dos hijos *VERIFICADO*
+				cout << "\t(D.1).Hijo derecho tiene dos hijos\n";
+				derecho->der->padre = arbol;
+				derecho->izq->padre = arbol;
+				arbol->izq = derecho->izq;
+				arbol->der = derecho->der;
+				derecho->padre = NULL;
+				derecho->izq = NULL;
+				derecho->der = NULL;
+
+				delete derecho;
+			}
+			else if (derecho->izq == NULL && derecho->der == NULL) {
+				//(D.2).Hijo derecho no tiene hijos *VERIFICADO*
+				cout << "\t(D.2).Hijo derecho no tiene hijos \n";
+				derecho->padre = NULL;
+				arbol->der = NULL;
+				delete derecho;
+			}
+			else if (derecho->izq != NULL)
+			{
+				//(D.3).Hijo derecho tiene un hijo izquierdo *VERIFICADO*
+				cout << "\tHijo derecho tiene un hijo izquierdo\n";
+
+				derecho->izq->padre = arbol;
+				arbol->izq = derecho->izq;
+				arbol->der = NULL;
+				derecho->padre = NULL;
+				derecho->izq = NULL;
+				delete derecho;
+			}
+			else if (derecho->der != NULL) {
+				//(D.4).Hijo derecho tiene un hijo derecho *VERIFICADO*
+				cout << "\t(D.4).Hijo derecho tiene un hijo derecho\n";
+				derecho->der->padre = arbol;
+				arbol->der = derecho->der;
+				derecho->padre = NULL;
+				derecho->der = NULL;
+				delete derecho;
+			}
+		}
+	}
+	else if (arbol->dato != arbol->padre->dato) {//Estamos hablando de cualquier nodo menos la raíz
+		/*Caso2: El nodo a eliminar corresponde a cualquier nodo diferente al nodo raíz:
+		se presentan 3 subcasos: 
+			(A).El nodo a eliminar tiene 2 hijos
+			(B).El nodo a eliminar tiene 1 hijo
+			(C).El nodo a eliminar corresponde a una hoja (NO TIENE HIJOS))*/
+			
+			cout << "\tHablamos de cualquier nodo diferente al nodo raíz\n";
+
+			if (arbol->izq!=NULL && arbol->der!=NULL){//Caso (A) nodo a eliminar tiene 2 hijos
+
+				cout << "\tEl nodo a eliminar tiene dos hijos\n";
+
+				if (arbol->padre->der==arbol)
+				{
+					cout << "\tEl nodo a eliminar es un hijo derecho.\n";
+					//Caso A.1: El nodo a eliminar es un hijo derecho.*VERIFICADO*
+									/*
+										2
+									 1    (10)
+										  8  12
+										*/
+					if (arbol->der->der==NULL && arbol->der->izq==NULL )
+					{
+						//Caso A.1.1 Su hijo derecho no tiene hijos *VERIFICADO*
+						/*
+										2
+									 1      (10)
+										  8     *12*
+                                         6 9  null null
+										*/
+						cout << "\tTiene hijo izquierdo y este tiene hijos o no pero *Su hijo derecho NO tiene hijos*\n";
+						nodo* hijoDerecho = new nodo();
+						hijoDerecho = arbol->der;
+						arbol->dato = hijoDerecho->dato;
+						arbol->der = NULL;
+						hijoDerecho->padre = NULL;
+						hijoDerecho->dato = NULL;
+						delete hijoDerecho;
+					}
+					else if (arbol->der->der!=NULL && arbol->der->izq==NULL)
+					{
+						cout << "\tSu hijo derecho tiene hijo derecho y este tiene hijos o no tiene pero el *NO tiene hijo izquierdo*\n";
+						//Caso A.1.2 Su hijo derecho tiene hijo derecho y este tiene hijos o no tiene pero el *NO tiene hijo izquierdo.
+						/*VERIFICADO*
+										2
+									 1      (10)
+										  8     *12*
+										 6 9 null   14
+										          13  15
+										*/
+						nodo* hijoDerecho = new nodo();
+						hijoDerecho = arbol->der;
+						arbol->dato = hijoDerecho->dato;
+						arbol->der = hijoDerecho->der;
+						hijoDerecho->der->padre = arbol;
+						hijoDerecho->padre = NULL;
+						hijoDerecho->der = NULL;
+						hijoDerecho->dato = NULL;
+						delete hijoDerecho;
+					}
+					else if (arbol->der->der != NULL && arbol->der->izq != NULL && (arbol->der->izq->izq!=NULL && (arbol->der->izq->der != NULL|| arbol->der->izq->der == NULL)))
+					{
+						//Caso A.1.3 EL hijo derecho tiene hijos, se debe encontrar a partir de su hijo derecho cuál es su 
+						//tatara nieto más izquierdo.
+						//*El hijo izquierdo tiene por lo menos un hijo izquierdo
+						cout << "\tEL hijo derecho tiene hijos, se debe encontrar a partir de su hijo derecho cuál es su tatara nieto más izquierdo.\n";
+						cout << "\tEl hijo izquierdo tiene por lo menos un hijo\n";
+						/*Verificado*
+										  2
+									 1       (11)
+										  8       *15*  <-----hijo derecho
+										6   9   13   20
+											 [12] 13   21
+										         
+											   doce sería el tataranieto más izquierdo de *15*
+											   ,(11) se remplaza por (12), y el [12] se elimina
+											   El tataranieto más izquierdoe es un nodo hoja
+										*/
+						nodo* ElmasIzquierdo = minimo(arbol->der);
+						cout << "\tEl más izquierdo es: " << ElmasIzquierdo->dato << endl;
+						arbol->dato = ElmasIzquierdo->dato;
+						ElmasIzquierdo->padre->izq = NULL;
+						ElmasIzquierdo->padre = NULL;
+						ElmasIzquierdo->dato = NULL;
+						delete ElmasIzquierdo;
+					}
+					else if (arbol->der->izq->der == NULL && arbol->der->izq->izq == NULL && arbol->der->der!=NULL) {
+						//Caso A.1.4 El hijo derecho tiene dos hijos pero su nieto izquierdo no tiene hijos
+						/*Verificado*
+										  2
+									 1       (11)
+										  8       *15*  <-----hijo derecho
+										6   9   [13]  20
+											           21
+
+											    13 sería el nieto más izquierdo de *15*
+											   ,(11) se remplaza por (13), y el [13] se elimina
+											   El nieto más izquierdoe es un nodo hoja
+										*/
+						
+						cout << "\tCaso A.1.4 El hijo derecho tiene dos hijos pero su nieto izquierdo no tiene hijos\n";
+						nodo* ElmasIzquierdo = new nodo();
+						ElmasIzquierdo = arbol->der->izq;
+						cout << "\tEl más izquierdo es: " << ElmasIzquierdo->dato << endl;
+						arbol->dato = ElmasIzquierdo->dato;
+						arbol->der->izq = NULL;
+						ElmasIzquierdo->padre = NULL;
+						ElmasIzquierdo->dato = NULL;
+						delete ElmasIzquierdo;
+					}
+					else if (arbol->der->izq->der != NULL && arbol->der->der != NULL) {
+						//Agregado a última hora, el máx izquierdo tiene un unico hijo derecho
+						cout << "\t el máx izquierdo tiene un unico hijo derecho\n";
+						/*
+						                      1
+										null      (5)<------------arbol
+												3     8
+												   [6]  9
+													 7
+						*/
+						nodo* ElmasIzquierdo = minimo(arbol->der);
+						cout << "\tEl más izquierdo es: " << ElmasIzquierdo->dato << endl;
+
+						arbol->dato = ElmasIzquierdo->dato;
+						arbol->der->izq = ElmasIzquierdo->der;
+						ElmasIzquierdo->der->padre = arbol->der;
+
+						ElmasIzquierdo->padre = NULL;
+						ElmasIzquierdo->der = NULL;
+						ElmasIzquierdo->dato = NULL;
+						delete ElmasIzquierdo;
+
+					}
+					else {
+						cout << "\tLa distribución actual del árbol no permite eliminar el nodo\n";
+					}
+
+				}
+				else if (arbol->padre->izq == arbol)
+				{
+					cout << "\tEl nodo a eliminar es un hijo izquierdo.\n";
+					
+					//Caso A.2: El nodo a eliminar es un hijo izquierdo.*VERIFICADO*
+									/*
+										      15
+									      (10)   20
+										  8  12
+										*/
+					if (arbol->der->der == NULL && arbol->der->izq == NULL)
+					{
+						//Caso A.2.1 Su hijo derecho no tiene hijos *VERIFICADO*------------------------------------->>>>x2
+						/*
+										           15
+									        (10)       20
+										  8     *12*
+										 6 9  null null
+										*/
+						cout << "\tTiene hijo izquierdo y este tiene hijos o no pero *Su hijo derecho NO tiene hijos*\n";
+						nodo* hijoDerecho = new nodo();
+						hijoDerecho = arbol->der;
+						arbol->dato = hijoDerecho->dato;
+						arbol->der = NULL;
+						hijoDerecho->padre = NULL;
+						hijoDerecho->dato = NULL;
+						delete hijoDerecho;
+					}
+					else if (arbol->der->der != NULL && arbol->der->izq == NULL)
+					{
+						cout << "\tSu hijo derecho tiene hijo derecho y este tiene hijos o no tiene pero el *NO tiene hijo izquierdo*\n";
+						//Caso A.2.2 Su hijo derecho tiene hijo derecho y este tiene hijos o no tiene pero el *NO tiene hijo izquierdo.
+						/*VERIFICADO*------------------------------------->>>>>>>>>>>>>>>>>x2
+										            20
+									        (10)           25
+										  8     *12*
+										 6 9 null   14
+												  13  15
+										*/
+						nodo* hijoDerecho = new nodo();
+						hijoDerecho = arbol->der;
+						arbol->dato = hijoDerecho->dato;
+						arbol->der = hijoDerecho->der;
+						hijoDerecho->der->padre = arbol;
+						hijoDerecho->padre = NULL;
+						hijoDerecho->der = NULL;
+						hijoDerecho->dato = NULL;
+						delete hijoDerecho;
+					}
+					else if (arbol->der->der != NULL && arbol->der->izq != NULL && (arbol->der->izq->izq != NULL && (arbol->der->izq->der != NULL || arbol->der->izq->der == NULL)))
+					{
+						//Caso A.2.3 EL hijo derecho tiene hijos, se debe encontrar a partir de su hijo derecho cuál es su 
+						//tatara nieto más izquierdo.
+						//*El hijo izquierdo tiene por lo menos un hijo izquierdo
+						cout << "\tEL hijo derecho tiene hijos, se debe encontrar a partir de su hijo derecho cuál es su tatara nieto más izquierdo.\n";
+						cout << "\tEl hijo izquierdo tiene por lo menos un hijo\n";
+						/*Verificado*------------------------------->x2
+										                 30
+									         (11)                  35
+										  8       *15*  <-----hijo derecho
+										6   9   13   20
+											 [12] 13   21
+
+											   doce sería el tataranieto más izquierdo de *15*
+											   ,(11) se remplaza por (12), y el [12] se elimina
+											   El tataranieto más izquierdoe es un nodo hoja
+										*/
+						nodo* ElmasIzquierdo = minimo(arbol->der);
+						cout << "\tEl más izquierdo es: " << ElmasIzquierdo->dato << endl;
+						arbol->dato = ElmasIzquierdo->dato;
+						ElmasIzquierdo->padre->izq = NULL;
+						ElmasIzquierdo->padre = NULL;
+						ElmasIzquierdo->dato = NULL;
+						delete ElmasIzquierdo;
+					}
+					else if (arbol->der->izq->der == NULL && arbol->der->izq->izq == NULL && arbol->der->der != NULL) {
+						//Caso A.2.4 El hijo derecho tiene dos hijos pero su nieto izquierdo no tiene hijos
+						/*Verificado*----------------------------->x2
+										                30
+									         (11)               35
+										  8       *15*  <-----hijo derecho
+										6   9   [13]  20
+													   21
+
+												13 sería el nieto más izquierdo de *15*
+											   ,(11) se remplaza por (13), y el [13] se elimina
+											   El nieto más izquierdoe es un nodo hoja
+										*/
+
+						cout << "\tCaso A.2.4 El hijo derecho tiene dos hijos pero su nieto izquierdo no tiene hijos\n";
+						nodo* ElmasIzquierdo = new nodo();
+						ElmasIzquierdo = arbol->der->izq;
+						cout << "\tEl más izquierdo es: " << ElmasIzquierdo->dato << endl;
+						arbol->dato = ElmasIzquierdo->dato;
+						arbol->der->izq = NULL;
+						ElmasIzquierdo->padre = NULL;
+						ElmasIzquierdo->dato = NULL;
+						delete ElmasIzquierdo;
+					}
+					else if (arbol->der->izq->der != NULL &&  arbol->der->der != NULL) {
+						//Agregado a última hora, el máx izquierdo tiene un unico hijo derecho
+						cout << "\t el máx izquierdo tiene un unico hijo derecho\n";
+						/*
+													 10
+												  (5)<------------arbol
+												3     8
+												   [6]  9
+													 7
+						*/
+						nodo* ElmasIzquierdo = minimo(arbol->der);
+						cout << "\tEl más izquierdo es: " << ElmasIzquierdo->dato << endl;
+
+						arbol->dato = ElmasIzquierdo->dato;
+						arbol->der->izq = ElmasIzquierdo->der;
+						ElmasIzquierdo->der->padre = arbol->der;
+						
+						ElmasIzquierdo->padre = NULL;
+						ElmasIzquierdo->der = NULL;
+						ElmasIzquierdo->dato = NULL;
+						delete ElmasIzquierdo;
+						
+					}
+					else {
+						cout << "\tLa distribución actual del árbol no permite eliminar el nodo\n";
+					}
+				}
+			}
+			else if (arbol->der!=NULL && arbol->izq==NULL){//Caso (B.1)El nodo a eliminar tiene 1 hijo derecho
+			/*Tenemos dos subcasos
+				B.1.1: el nodo tiene un hijo derecho sin hijos
+				B.1.2: el nodo tiene un hijo derecho con hijo derecho 
+				B.1.3 El nodo tiene un hijo derecho con hijo izquierdo y derecho
+			*/
+			if (arbol->der->der==NULL && arbol->der->izq==NULL)
+			{  
+				//B.1.1:el nodo tiene un hijo derecho sin hijos *VERIFICADO*
+
+				cout << "\tel hijo derecho no tiene hijos\n";
+				/*                      12
+				                     (6)
+							   null     [7]
+								     null null
+				*/
+				nodo* hijoDerecho = new nodo();
+				hijoDerecho = arbol->der;
+				arbol->dato = hijoDerecho->dato;
+				arbol->der = NULL;
+				hijoDerecho->padre = NULL;
+				hijoDerecho->dato = NULL;
+				delete hijoDerecho;
+
+			}
+			else if (arbol->der->der!=NULL && arbol->der->izq==NULL){
+				//B.1.2:el nodo tiene un hijo derecho con hijos *VERIFICADO*
+				cout << "\tEl hijo derecho tiene hijo derecho y este tiene o no hijos\n";
+				/*                      12
+									 (6)
+							   null     [8]
+									 null  10
+									      9 11
+				*/
+				nodo* hijoDerecho = new nodo();
+				hijoDerecho = arbol->der;
+				arbol->dato = hijoDerecho->dato;
+				arbol->der = hijoDerecho->der;
+				hijoDerecho->der->padre = arbol;
+				hijoDerecho->padre = NULL;
+				hijoDerecho->der = NULL;
+				hijoDerecho->dato = NULL;
+				delete hijoDerecho;
+			}
+			else if (arbol->der->der!=NULL && arbol->der->izq!=NULL){
+				//B.1.3 El nodo tiene un hijo derecho con hijo izquierdo y derecho *VERIFICADO*
+				cout << "\tEl nodo tiene un hijo derecho con hijo izquierdo y derecho\n";
+				/*                      12
+									 (6)
+							   null     [8]<--------------------hijoDerecho
+								       7   10
+										  9 11
+				*/
+				nodo* hijoDerecho = new nodo();
+				hijoDerecho = arbol->der;
+				arbol->dato = hijoDerecho->dato;
+				arbol->der = hijoDerecho->der;
+				arbol->izq = hijoDerecho->izq;
+				hijoDerecho->der->padre = arbol;
+				hijoDerecho->izq->padre = arbol;
+				hijoDerecho->padre = NULL;
+				hijoDerecho->izq = NULL;
+				hijoDerecho->der = NULL;
+				hijoDerecho->dato = NULL;
+				delete hijoDerecho;
+			}
+			else
+			{
+				cout << "\tLa distribución del árbol no permite eliminar el nodo\n";
+			}
+
+			}
+			else if (arbol->der == NULL && arbol->izq != NULL){//Caso (B.2)El nodo a eliminar tiene 1 hijo izquierdo--------------------------------
+				//Caso (B.2)El nodo a eliminar tiene 1 hijo derecho
+			/*Tenemos dos subcasos
+				B.2.1: el nodo tiene un hijo derecho sin hijos
+				B.2.2: el nodo tiene un hijo derecho con hijo derecho
+				B.2.3 El nodo tiene un hijo derecho con hijo izquierdo y derecho
+			*/
+				if (arbol->izq->der == NULL && arbol->izq->izq == NULL)
+				{
+					//B.2.1:el nodo tiene un hijo izquierdo sin hijos *VERIFICADO*x2
+
+					cout << "\tel hijo izquierdo no tiene hijos\n";
+					/*                                   12
+										          (8)
+								            [7]       null 
+										 null null
+					*/
+					nodo* hijoIzquierdo = new nodo();
+					hijoIzquierdo = arbol->izq;
+					arbol->dato = hijoIzquierdo->dato;
+					arbol->izq = NULL;
+					hijoIzquierdo->padre = NULL;
+					hijoIzquierdo->dato = NULL;
+					delete hijoIzquierdo;
+
+				}
+				else if (arbol->izq->der != NULL && arbol->izq->izq == NULL) {
+					//B.2.2:el nodo tiene un hijo izquierdo con hijos *VERIFICADO*x2
+					cout << "\tEl hijo izquierdo tiene hijo derecho y este tiene o no hijos\n";
+					/*                                  12
+										           (10)
+						hijoizq------------>[3]          null
+										 null  8
+											  5 9
+					*/
+					nodo* hijoIzquierdo = new nodo();
+					hijoIzquierdo = arbol->izq;
+					arbol->dato = hijoIzquierdo->dato;
+					arbol->izq = hijoIzquierdo->der;
+					
+					hijoIzquierdo->der->padre = arbol;
+					
+					hijoIzquierdo->padre = NULL;
+					hijoIzquierdo->der = NULL;
+					hijoIzquierdo->dato = NULL;
+					delete hijoIzquierdo;
+				}
+				else if (arbol->izq->der != NULL && arbol->izq->izq != NULL) {
+					//B.2.3 El nodo tiene un hijo izquierdo con hijo izquierdo y derecho *VERIFICADO*x2
+					cout << "\tEl nodo tiene un hijo izquierdo con hijo izquierdo y derecho\n";
+					/*                                 12
+										         (9)<-----------dato a borrar
+					  hijoIZquierdo-------->[2]       null
+										   1   6
+											  4 7
+					*/
+					nodo* hijoIzquierdo = new nodo();
+					hijoIzquierdo = arbol->izq;
+					arbol->dato = hijoIzquierdo->dato;
+					arbol->der = hijoIzquierdo->der;
+					arbol->izq = hijoIzquierdo->izq;
+					hijoIzquierdo->der->padre = arbol;
+					hijoIzquierdo->izq->padre = arbol;
+					hijoIzquierdo->padre = NULL;
+					hijoIzquierdo->izq = NULL;
+					hijoIzquierdo->der = NULL;
+					hijoIzquierdo->dato = NULL;
+					delete hijoIzquierdo;
+				}
+				else
+				{
+					cout << "\tLa distribución del árbol no permite eliminar el nodo\n";
+				}
+
+			}
+			else if (arbol->der==NULL && arbol->izq==NULL){//Caso (C) EL nodo es una hoja
+				cout << "\tEl nodo corresponde a una hoja\n";
+				/*            6
+				          3       12
+                        (1) 4   11  15
+						             (16)<---------------hoja
+									 Ejemplo: BORRAR NODO HOJA 1 y 16
+				*/
+				
+				//Se presentan dos casos:  C.1) Hoja derecha
+				//                         C.2) Hoja izquierda
+
+				nodo* hoja = new nodo();
+				if (arbol->padre->izq==arbol)
+				{
+					cout << "\tHoja izquierda\n";
+					hoja = arbol;
+					arbol->padre->izq = NULL;
+					hoja->padre = NULL;
+					hoja->dato = NULL;
+					delete hoja;
+				}
+				else if (arbol->padre->der==arbol)
+				{
+					cout << "\tHoja derecha\n";
+					hoja = arbol;
+					arbol->padre->der = NULL;
+					hoja->padre = NULL;
+					hoja->dato = NULL;
+					delete hoja;
+				}
+			}
+	}
+
+}
+
+nodo* minimo(nodo*& arbol)
+{
+	if (arbol == NULL) {
+		return NULL;
+	}
+	if (arbol->izq)
+	{
+		return minimo(arbol->izq);
+		//busca el nodo más izquierdo
+	}
+	else
+	{
+		//Si no hay más izquierdo, manda el que encuentra
+		return arbol;
+	}
+}
+
+void preOrden(nodo* arbol)
+{
+	if(arbol==NULL)
+	{
+		return;
+	}
+	else {
+		cout << arbol->dato << " - ";
+		preOrden(arbol->izq);
+		preOrden(arbol->der);
+	}
+}
+
+void inOrden(nodo* arbol)
+{
+	if (arbol==NULL)
+	{
+		return;
+	}
+	else
+	{
+		inOrden(arbol->izq);
+		cout << arbol->dato << " - ";
+		inOrden(arbol->der);
+	}
+}
+
+void postOrden(nodo* arbol)
+{
+	if (arbol==NULL)
+	{
+		return;
+	}
+	else
+	{
+		postOrden(arbol->izq);
+		postOrden(arbol->der);
+		cout << arbol->dato << " - ";
+	}
+}
+
+void menu()
+{
+	nodo* arbol = NULL;
+	int data, opcion, contador = 0; 
+	string flag = "1";//Para no borrar nodo
+	do
+	{
+		cout << "\tMENU" << endl;
+		cout << "\t1.Insertar nodo\n";
+		cout << "\t2.Mostrar árbol\n";
+		cout << "\t3.Buscar nodo:\n";
+		cout << "\t4.Recorrido en profundidad PreOrden:\n";
+		cout << "\t5.Recorrido en profundidad InOrden:\n";
+		cout << "\t6.Recorrido en profundidad postOrden:\n";
+		cout << "\t7.Eliminar un nodo del árbol:\n";
+		cout << "\t8.Salir" << endl;
+		cout << "\topción: "; cin >> opcion;
+		switch (opcion)
+		{
+		case 1://cout<<"\n\tSe insertan de forma aleatoria "<<tamano<<" datos\n"; 
+			cout << "\n\tNo inserte datos iguales porque no se evaluaron los casos para eliminar nodos repetidos\n";
+			for (int i = 0; i < tamano; i++)
+			{
+				//data = rand() % 100;
+				cout << "\tDato [" << i + 1 << "]: ";	cin >> data; cout << endl;
+				inser(arbol, data,NULL);
+			}
+			system("pause"); cout << "\n"; break;
+		case 2:cout << "\Se muestra el árbol:\n\n";
+			mostrar(arbol, contador);
+			cout << "\n\tSe cuentan "<<numNodo<<" nodos\n"; 
+			cout << "\n"; numNodo = 0;
+			system("pause"); break;
+		case 3:cout << "\tBusqueda, digite un num: "; 
+			cin >> data;
+			if (busqueda(arbol, data,flag)==true)
+			{
+				cout << "\tSe encuentra el elemento " << data << endl;
+			}
+			else {
+				cout << "\tNo se encuentra\n";
+			}system("pause");
+			break;
+		case 4:cout << "\tPreOrden:\n\n";
+			mostrar(arbol, contador);
+			cout << endl;
+			preOrden(arbol);
+			cout << endl;
+			system("pause"); 
+			break;
+		case 5:cout << "\tInOrden:\n\n";
+			mostrar(arbol, contador);
+			cout << endl;
+			inOrden(arbol);
+			cout << endl;
+			system("pause");
+			break;
+		case 6:cout << "\tInOrden:\n\n";
+			mostrar(arbol, contador);
+			cout << endl;
+			postOrden(arbol);
+			cout << endl;
+			system("pause");
+			break;
+		case 7:flag = "0";
+			cout<<"\n\tDigite el dato a eliminar: "; cin >> data;
+			if (busqueda(arbol, data, flag) == true)
+			{
+				cout << "\tSe encuentra el nodo y se elimina " << data << endl;
+			}
+			else {
+				cout << "\tNo se encuentra\n";
+			}flag = "1";
+			system("pause");
+			break;
+		}system("cls");
+		
+	} while (opcion!=8);
+}
